@@ -1,13 +1,20 @@
 
 # coding: utf-8
 
-# # Use Case Study
-# From users’ past reviews on businesses on Yelp, figure out how likely her review for another business has five-star.
+# ## Given a user’s past reviews on Yelp (available from yelp-challenge dataset)
+# ## When the user writes a review for a business she hasn't reviewed before
+# ## How likely will it be a Five-Star review?
 # 
+# - Load data
+# - Visualize the data
+# - Featurize the data
+# - Join tables to populate the features
+# - Model the data: Logistic regression
+# - Evaluate the model
 
-# ## Load data
+# # Load data
 
-# In[405]:
+# In[468]:
 
 import pandas as pd
 
@@ -17,18 +24,18 @@ user_df = pd.read_csv(PATH + 'yelp_academic_dataset_user.csv')
 review_df = pd.read_csv(PATH + 'yelp_academic_dataset_review.csv')
 
 
-# In[406]:
+# In[469]:
 
 review_df = review_df.set_index('review_id')
 user_df = user_df.set_index('user_id')
 biz_df = biz_df.set_index('business_id')
 
 
-# ## Visulize the data
+# # Visulize the data
 
-# ### Example: Plot distribution of review star ratings
+# ## Example: Plot distribution of review star ratings
 
-# In[407]:
+# In[470]:
 
 import seaborn as sns
 get_ipython().magic(u'matplotlib inline')
@@ -39,14 +46,16 @@ sns.set_context(context="talk")
 sns.set(palette='Set2', rc={"figure.figsize": (15, 8)}, style="ticks")
 
 
-# In[408]:
+# In[471]:
 
 ax = sns.countplot(x='stars', data=review_df, hue='type')
 # Rmoving spines
 sns.despine()
 
 
-# In[409]:
+# ## Example: Plot review star ratings by year
+
+# In[472]:
 
 review_df['datetime'] = pd.to_datetime(review_df['date'])
 review_df['year'] = review_df['datetime'].dt.year
@@ -54,14 +63,16 @@ ax = sns.countplot(x='year', data=review_df, hue='stars')
 sns.despine()
 
 
-# ## Featurize the data
+# # Featurize the data
+# 
+# - Convert date string to date delta
+#   - For example, business_age
+# - Convert strings to categorical features
+#   - For example, noise level: quiet, loud, very loud.
+# - Drop unused features
+#   - For example, business_name
 
-# In[410]:
-
-### Example: Convert categorial features to binary features 
-
-
-# In[411]:
+# In[474]:
 
 def calculate_date_delta(df, from_column, to_column):
     datetime = pd.to_datetime(df[from_column])
@@ -70,21 +81,21 @@ def calculate_date_delta(df, from_column, to_column):
     df.drop(from_column, axis=1, inplace=True)
 
 
-# In[412]:
+# In[475]:
 
 def to_length(df, from_column, to_column):
     df[to_column] = df[from_column].apply(lambda x: len(x))
     df.drop(from_column, axis=1, inplace=True)
 
 
-# In[413]:
+# In[476]:
 
 def drop_columns(df, columns):
     for column in columns:
         df.drop(column, axis=1, inplace=True)
 
 
-# In[414]:
+# In[477]:
 
 def to_boolean(df, columns):
     for column in columns:
@@ -93,12 +104,12 @@ def to_boolean(df, columns):
         df.drop(column, axis=1, inplace=True)
 
 
-# In[415]:
+# In[478]:
 
 FILL_WITH = 0.0
 
 
-# In[416]:
+# In[479]:
 
 def to_category(df, columns):
     for column in columns:
@@ -106,71 +117,71 @@ def to_category(df, columns):
         # add FILL_WITH category for fillna() to work w/o error
         if (FILL_WITH not in df[column].cat.categories):
             df[column] = df[column].cat.add_categories([FILL_WITH])
-        print 'categories for ', column, ' include ', df[column].cat.categories
+        #print 'categories for ', column, ' include ', df[column].cat.categories
 
 
-# In[417]:
+# In[480]:
 
 def category_rename_to_int(df, columns):
     for column in columns:
         df[column].cat.remove_unused_categories()
         size = len(df[column].cat.categories)
-        print 'column ', column, ' has ', size, ' columns, include ', df[column].cat.categories
-        df[column] = df[column].cat.rename_categories(range(size))
-        print 'becomes ', df[column].cat.categories
+        #print 'column ', column, ' has ', size, ' columns, include ', df[column].cat.categories
+        df[column] = df[column].cat.rename_categories(range(1, size+1))
+        #print 'becomes ', df[column].cat.categories
 
 
-# In[418]:
+# In[481]:
 
 review_df.columns.values
 
 
-# In[419]:
+# In[482]:
 
 calculate_date_delta(df=review_df, from_column='date', to_column='date_delta')
 
 
-# In[420]:
+# In[483]:
 
 to_length(df=review_df, from_column='text', to_column='text_len')
 
 
-# In[421]:
+# In[484]:
 
 drop_columns(df=review_df, columns=['type', 'year', 'datetime'])
 
 
-# In[422]:
+# In[485]:
 
 review_df.fillna(value=0.0, inplace=True)
 
 
-# In[423]:
+# In[486]:
 
 calculate_date_delta(df=user_df, from_column='yelping_since', to_column='date_delta')
 
 
-# In[424]:
+# In[487]:
 
 to_length(df=user_df, from_column='friends', to_column='friends_count')
 
 
-# In[425]:
+# In[488]:
 
 to_length(df=user_df, from_column='elite', to_column='elite_count')
 
 
-# In[426]:
+# In[489]:
 
 drop_columns(df=user_df, columns=['name', 'type'])
 
 
-# In[427]:
+# In[490]:
 
 user_df.fillna(value=0.0, inplace=True)
 
 
-# In[428]:
+# In[491]:
 
 drop_columns(
     df=biz_df,
@@ -202,7 +213,7 @@ drop_columns(
 )
 
 
-# In[429]:
+# In[492]:
 
 to_cat_columns = [
     'attributes.Ambience.casual',
@@ -211,6 +222,7 @@ to_cat_columns = [
     'attributes.Noise Level',
     'attributes.Smoking',
     'attributes.Wi-Fi',
+    'attributes.Ages Allowed',
 ]
 to_category(
     df=biz_df,
@@ -218,12 +230,12 @@ to_category(
 )
 
 
-# In[430]:
+# In[493]:
 
 biz_df.fillna(value=FILL_WITH, inplace=True)
 
 
-# In[431]:
+# In[494]:
 
 category_rename_to_int(
     df=biz_df,
@@ -231,39 +243,35 @@ category_rename_to_int(
 )
 
 
-# #### Join three tables (review, biz, user) to one (review-with-all-info)
+# # Join tables to populate the features
 # 
-# Each join is a many-to-one join: 
+# Join three tables (review, biz, user) to one (review-with-all-info).
+# Each join is a many-to-one join.
+
+# In[495]:
+
 # The `user_df` DataFrame is already indexed by the join key (`user_id`). Make sure it's on the right side of join.
-
-# In[432]:
-
 review_join_user = review_df.join(user_df, on='user_id', lsuffix='_review', rsuffix='_user')
 
 
-# In[433]:
+# In[496]:
 
 review_join_user_join_biz = review_join_user.join(biz_df, on='business_id', rsuffix='_biz')
 
 
-# In[434]:
+# In[497]:
 
 drop_columns(df=review_join_user_join_biz, columns=['user_id', 'business_id'])
 
 
-# In[435]:
+# In[498]:
 
-review_join_user_join_biz.columns.values
-
-
-# In[436]:
-
-review_join_user_join_biz.head(1)
+#review_join_user_join_biz.columns.values
 
 
 # # Identify data X and target y
 
-# In[437]:
+# In[500]:
 
 # target y is whether a review is five-star
 y = review_join_user_join_biz.stars.apply(lambda x: x == 5)
@@ -276,7 +284,7 @@ review_join_user_join_biz.drop('stars', axis=1, inplace=True)
 features = X.columns.values
 
 
-# In[438]:
+# In[501]:
 
 from sklearn import preprocessing
 
@@ -298,7 +306,7 @@ def label_decode(df, columns, label_encoders):
         df[column] = le.inverse_transform(df[column])
 
 
-# In[439]:
+# In[502]:
 
 columns_need_encode = [
     'attributes.BYOB/Corkage',
@@ -310,12 +318,7 @@ les = label_encode(
 #label_decode(df=df, columns=columns_need_encode, label_encoders=les)
 
 
-# In[ ]:
-
-X.head(3).to_string()
-
-
-# In[ ]:
+# In[504]:
 
 from sklearn.cross_validation import train_test_split
 
@@ -323,42 +326,19 @@ from sklearn.cross_validation import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, y)
 
 
-# In[ ]:
+# In[505]:
 
 print 'training data shape', X_train.shape
 print 'test data shape', X_test.shape
 print 'converted label data shape', y_train.shape
-###print 'features', features
+print 'features', features
 
 
-# ## Model the data
-
-# ### Logistic regression
+# # Model the data: Logistic regression
 # 
 # Estimate the probability of a binary response based on one or more features. The probability of a review being five-star.
-# 
-# Benefits:
-# - Fast
-# - Stable
-# - Can handle sparse data
-# 
-# Disadvantages:
-# - Necessary to normalize data
-# - Data must be numeric
-# 
-# Parameters:
-# - penalty: Used to specify the norm used in the penalization ('l1' or 'l2'). Default = 'l2'.
-# - C: Inverse of regularization strength, smaller values specify stronger regularization. It must be a positive float. Default = 1.0.
-# - tol: Tolerance for stopping criteria. Default = 0.0001.
 
-# #### Standardize features
-
-# In[ ]:
-
-
-
-
-# In[ ]:
+# In[506]:
 
 # Standardize features by removing the mean and scaling to unit variance
 scaler = preprocessing.StandardScaler().fit(X_train)
@@ -367,33 +347,49 @@ X_train_scaled = scaler.transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
 
-# In[ ]:
+# In[514]:
+
+from sklearn.cross_validation import cross_val_score
+import numpy as np
+
+# Function used to print cross-validation scores
+def training_score(est, X, y, cv):
+    acc = cross_val_score(est, X, y, cv = cv, scoring='accuracy')
+    roc = cross_val_score(est, X, y, cv = cv, scoring='roc_auc')
+    print '5-fold Train CV | Accuracy:', round(np.mean(acc), 3),'+/-',     round(np.std(acc), 3),'| ROC AUC:', round(np.mean(roc), 3), '+/-', round(np.std(roc), 3)
 
 
-
-
-# In[ ]:
-
-
-
-
-# #### Build model
-
-# In[ ]:
+# In[515]:
 
 from sklearn import linear_model
+from sklearn.cross_validation import StratifiedKFold
 
 # Build model using default parameter values
 lrc = linear_model.LogisticRegression()
 
-# cross-validation 
-cv = StratifiedKFold(y, n_folds=5, shuffle=True)
-training_score(lrc, X_train_scaled, y, cv)
-
-
-# #### Evaluation via Confusion Matrix (false positive; false negative) 
 
 # In[ ]:
+
+# cross-validation 
+cv = StratifiedKFold(y_train, n_folds=5, shuffle=True)
+
+
+# In[517]:
+
+# print cross-validation scores
+training_score(
+    est=lrc,
+    X=X_train_scaled,
+    y=y_train,
+    cv=cv,
+)
+
+
+# # Evaluation via Confusion Matrix 
+# False positive (upper right); 
+# False negative (bottom left)
+
+# In[519]:
 
 # Compute confusion matrix
 import matplotlib.pyplot as plt
@@ -408,19 +404,22 @@ def plot_confusion_matrix(cm, title='Confusion matrix', cmap=plt.cm.Blues):
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
 
-# Split the data into a training set and a test set
-X_train, X_test, Y_train, Y_test = train_test_split(X, y)
-
 # Run classifier
-Y_pred = lrc.fit(X_train, Y_train).predict(X_test)
-cm = confusion_matrix(Y_test, Y_pred)
+lrc_fit = lrc.fit(X_train_scaled, y_train)
+y_pred = lrc_fit.predict(X_test_scaled)
+cm = confusion_matrix(y_test, y_pred)
 
+
+# In[521]:
+
+'''
 # Compute confusion matrix
 np.set_printoptions(precision=2)
 print('Confusion matrix, without normalization')
 print(cm)
 plt.figure()
 plot_confusion_matrix(cm)
+'''
 
 # Normalize the confusion matrix by row (i.e by the number of samples in each class)
 cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
@@ -429,12 +428,4 @@ print(cm_normalized)
 plt.figure()
 plot_confusion_matrix(cm_normalized, title='Normalized confusion matrix')
 plt.show()
-
-
-# ### Make prediction with the model
-
-# In[ ]:
-
-# give a prediction of user:me evaluating biz:gary danco, get the prob. of me giving it a five-star
-# another example of me for another biz (park, street, civic center bart station) and give negative
 
