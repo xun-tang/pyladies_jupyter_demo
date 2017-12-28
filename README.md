@@ -10,4 +10,4 @@ August 9th, 2016
 Yelp
 
 ## Links
-[Slides](https://github.com/xun-tang/pyladies_jupyter_demo/pyladies_slides.pdf)
+[Slides](https://github.com/xun-tang/pyladies_jupyter_demo/blob/master/pyladies_slides.pdf)
